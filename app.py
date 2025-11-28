@@ -155,34 +155,65 @@ def tela_inicial(screen):
 
 
 # =============================
-# MAPA ESTÁTICO PARA TREINAMENTO
+# GERADOR DE MAPA ALEATÓRIO (EXECUTADO UMA VEZ)
 # =============================
-def gerar_mapa_estatico():
+def gerar_mapa_aleatorio_fixo():
+    """Gera um mapa aleatório que será usado durante toda a execução"""
     grid = [["vazio" for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
-
+    
+    posicoes_ocupadas = set()
+    
+    # Agente sempre no canto superior esquerdo
     ax, ay = 0, 0
     grid[ay][ax] = "agente"
-
-    grid[6][6] = "safe"
-
-    grid[1][2] = "zumbi"
-    grid[3][3] = "zumbi"
-    grid[4][5] = "zumbi"
-    grid[5][1] = "zumbi"
-
-    grid[0][3] = "suprimento"
-    grid[1][5] = "suprimento"
-    grid[2][1] = "suprimento"
-    grid[4][2] = "suprimento"
-    grid[5][5] = "suprimento"
-
-    grid[2][2] = "pedra"
-    grid[2][4] = "pedra"
-    grid[3][0] = "pedra"
-    grid[4][4] = "pedra"
-    grid[5][3] = "pedra"
-
+    posicoes_ocupadas.add((ax, ay))
+    
+    # Porta final sempre no canto inferior direito
+    px, py = GRID_SIZE - 1, GRID_SIZE - 1
+    grid[py][px] = "safe"
+    posicoes_ocupadas.add((px, py))
+    
+    # Função auxiliar para pegar posição livre
+    def posicao_livre():
+        while True:
+            x = random.randint(0, GRID_SIZE - 1)
+            y = random.randint(0, GRID_SIZE - 1)
+            if (x, y) not in posicoes_ocupadas:
+                return x, y
+    
+    # Adiciona 4 zumbis em posições aleatórias
+    for _ in range(4):
+        x, y = posicao_livre()
+        grid[y][x] = "zumbi"
+        posicoes_ocupadas.add((x, y))
+    
+    # Adiciona 5 suprimentos em posições aleatórias
+    for _ in range(5):
+        x, y = posicao_livre()
+        grid[y][x] = "suprimento"
+        posicoes_ocupadas.add((x, y))
+    
+    # Adiciona 5 pedras em posições aleatórias
+    for _ in range(5):
+        x, y = posicao_livre()
+        grid[y][x] = "pedra"
+        posicoes_ocupadas.add((x, y))
+    
     return grid, (ax, ay)
+
+# Variável global que armazena o mapa gerado
+MAPA_GLOBAL = None
+POSICAO_INICIAL = None
+
+def obter_mapa():
+    """Retorna o mapa global ou gera um novo se não existir"""
+    global MAPA_GLOBAL, POSICAO_INICIAL
+    if MAPA_GLOBAL is None:
+        MAPA_GLOBAL, POSICAO_INICIAL = gerar_mapa_aleatorio_fixo()
+    
+    # Retorna uma CÓPIA do mapa para não modificar o original
+    grid_copia = [row[:] for row in MAPA_GLOBAL]
+    return grid_copia, POSICAO_INICIAL
 
 
 # =============================
@@ -259,7 +290,7 @@ def treinar_agente(screen, agent, episodios=700):
 
     for ep in range(episodios):
 
-        grid, pos = gerar_mapa_estatico()
+        grid, pos = obter_mapa()
         suprimentos = 0
         steps = 0
 
@@ -319,7 +350,7 @@ def ia_jogar(screen, agente):
     font = pygame.font.SysFont("arial", 22)
     font2 = pygame.font.SysFont("arialblack", 36)
     
-    grid, pos = gerar_mapa_estatico()
+    grid, pos = obter_mapa()
     suprimentos = 0
     steps = 0
     rodando = True
@@ -361,7 +392,7 @@ def ia_jogar(screen, agente):
                 pygame.time.wait(3000)
                 
                 # Reinicia
-                grid, pos = gerar_mapa_estatico()
+                grid, pos = obter_mapa()
                 suprimentos = 0
                 steps = 0
         else:
@@ -372,7 +403,7 @@ def ia_jogar(screen, agente):
             pygame.display.update()
             pygame.time.wait(3000)
             
-            grid, pos = gerar_mapa_estatico()
+            grid, pos = obter_mapa()
             suprimentos = 0
             steps = 0
 
@@ -386,6 +417,17 @@ def ia_jogar(screen, agente):
 def main():
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("The Last Survivor - Q-Learning")
+
+    # Gera o mapa aleatório uma única vez no início
+    global MAPA_GLOBAL, POSICAO_INICIAL
+    print("🗺️  Gerando mapa aleatório...")
+    MAPA_GLOBAL, POSICAO_INICIAL = gerar_mapa_aleatorio_fixo()
+    print("✅ Mapa gerado! Elementos distribuídos:")
+    print("   - Agente: (0, 0)")
+    print("   - Porta Segura: (6, 6)")
+    print("   - Zumbis: 4")
+    print("   - Suprimentos: 5")
+    print("   - Pedras: 5")
 
     agente = QLearningAgent()
 
